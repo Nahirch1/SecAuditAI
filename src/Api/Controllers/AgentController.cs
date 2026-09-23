@@ -8,6 +8,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using SecAuditAI.Api.Data;
+using SecAuditAI.Api.Services;
 
 namespace SecAuditAI.Api.Controllers;
 
@@ -23,6 +24,7 @@ public class AgentController : ControllerBase
     private readonly Kernel _kernel;
     private readonly ILogger<AgentController> _logger;
     private readonly AppDbContext _db;
+    private readonly WebhookNotifier _webhookNotifier;
 
     private static readonly string[] AllowedExtensions =
         { ".txt", ".log", ".json", ".conf", ".yaml", ".yml" };
@@ -59,11 +61,16 @@ public class AgentController : ControllerBase
         Si no encontras ningun problema de seguridad, usa "severity": "Baja" y explicalo en "findings".
         """;
 
-    public AgentController(Kernel kernel, ILogger<AgentController> logger, AppDbContext db)
+    public AgentController(
+        Kernel kernel,
+        ILogger<AgentController> logger,
+        AppDbContext db,
+        WebhookNotifier webhookNotifier)
     {
         _kernel = kernel;
         _logger = logger;
         _db = db;
+        _webhookNotifier = webhookNotifier;
     }
 
     [HttpPost("analyze")]
@@ -190,6 +197,14 @@ public class AgentController : ControllerBase
         {
             _logger.LogWarning("Hallazgo CRÍTICO detectado en reporte #{ReportId} (usuario: {Username})",
                 report.Id, report.Username);
+
+            await _webhookNotifier.NotifyCriticalFindingAsync(new CriticalAlertPayload(
+                report.Id,
+                report.Username,
+                report.SourceFileName,
+                report.Severity,
+                findings,
+                report.CreatedAt));
         }
 
         return report;

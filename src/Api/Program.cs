@@ -64,6 +64,8 @@ builder.Services.AddKernel()
         apiKey: groqApiKey);
 
 // ---------- Servicios estándar ----------
+builder.Services.AddHttpClient<SecAuditAI.Api.Services.WebhookNotifier>();
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=secaudit.db"));
 
