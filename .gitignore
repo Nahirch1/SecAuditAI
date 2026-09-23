@@ -3,3 +3,6 @@ obj/
 *.user
 .vs/
 node_modules/
+*.db
+*.db-shm
+*.db-wal
