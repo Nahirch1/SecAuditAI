@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using SecAuditAI.Api.Data;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -62,6 +64,9 @@ builder.Services.AddKernel()
         apiKey: groqApiKey);
 
 // ---------- Servicios estándar ----------
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=secaudit.db"));
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
