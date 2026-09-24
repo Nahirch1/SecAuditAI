@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
     {
         // Usuario simulado para portfolio. En producción esto validaría
         // contra una base de datos con contraseñas hasheadas (ej. BCrypt).
-        if (request.Username != "auditor" || request.Password != "SecAudit2026!")
+        if (request.Username != "admin" || request.Password != "admin")
         {
             return Unauthorized(new { message = "Credenciales inválidas" });
         }

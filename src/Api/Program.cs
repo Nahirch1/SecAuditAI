@@ -65,6 +65,16 @@ builder.Services.AddKernel()
         apiKey: groqApiKey);
 
 // ---------- Servicios estándar ----------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendDev", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddHttpClient<SecAuditAI.Api.Services.WebhookNotifier>();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -83,6 +93,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("FrontendDev");
 
 app.UseAuthentication();
 app.UseAuthorization();
