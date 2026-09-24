@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Prometheus;
 using SecAuditAI.Api.Data;
 using SecAuditAI.Api.Services;
 
@@ -33,6 +34,15 @@ public class AgentController : ControllerBase
         { "Baja", "Media", "Alta", "Crítica" };
 
     private const long MaxFileSizeBytes = 1 * 1024 * 1024; // 1 MB
+
+    private static readonly Counter AnalysisCounter = Metrics.CreateCounter(
+        "secaudit_analysis_total",
+        "Cantidad total de análisis realizados por el agente de IA.",
+        new CounterConfiguration { LabelNames = new[] { "outcome", "severity" } });
+
+    private static readonly Histogram AnalysisDuration = Metrics.CreateHistogram(
+        "secaudit_analysis_duration_seconds",
+        "Duración de las llamadas al modelo de IA (Groq) para análisis de seguridad.");
 
     private const string SecurityGuidelines = """
         GUÍA DE BUENAS PRÁCTICAS DE SEGURIDAD (resumen):
@@ -146,8 +156,21 @@ public class AgentController : ControllerBase
             ResponseFormat = "json_object"
         };
 
-        var response = await chat.GetChatMessageContentAsync(history, executionSettings);
-        var rawJson = response.Content ?? "{}";
+        string rawJson;
+        using (AnalysisDuration.NewTimer())
+        {
+            try
+            {
+                var response = await chat.GetChatMessageContentAsync(history, executionSettings);
+                rawJson = response.Content ?? "{}";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al llamar al modelo de IA (Groq).");
+                AnalysisCounter.WithLabels("error", "n/a").Inc();
+                throw;
+            }
+        }
 
         string severity = "Desconocida";
         string findings = rawJson;
@@ -192,6 +215,8 @@ public class AgentController : ControllerBase
 
         _db.AuditReports.Add(report);
         await _db.SaveChangesAsync();
+
+        AnalysisCounter.WithLabels("success", severity).Inc();
 
         if (report.Severity == "Crítica")
         {

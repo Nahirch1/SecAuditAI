@@ -1,3 +1,4 @@
+using Prometheus;
 using Microsoft.EntityFrameworkCore;
 using SecAuditAI.Api.Data;
 using System.Text;
@@ -88,6 +89,9 @@ app.UseAuthorization();
 
 app.UseRateLimiter();
 
+app.UseHttpMetrics();
+
 app.MapControllers();
+app.MapMetrics();
 
 app.Run();
